@@ -672,6 +672,20 @@
       ['skills', 'interests', null]  // null для пустой ячейки
     ];
     
+    // Функции для работы с темой
+    const themeToggle = document.getElementById('theme-toggle');
+    const html = document.documentElement;
+    const isDark = localStorage.getItem('theme') === 'dark';
+    
+    if (isDark) {
+      html.classList.add('dark');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
+    
     // Получаем текущие координаты в матрице
     function getCurrentCoordinates() {
       const currentId = views[currentViewIndex].id;
@@ -700,13 +714,15 @@
     const progressIndicator = document.createElement('div');
     progressIndicator.className = 'progress-indicator';
     
-    viewMatrix.forEach((row, i) => {
+    for (let i = 0; i < viewMatrix.length; i++) {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'progress-row';
-      row.forEach((viewId, j) => {
-        if (viewId) {
+      for (let j = 0; j < viewMatrix[i].length; j++) {
+        if (viewMatrix[i][j]) {
           const dot = document.createElement('div');
           dot.className = 'progress-dot';
+          dot.dataset.row = i;
+          dot.dataset.col = j;
           dot.addEventListener('click', () => {
             if (!isAnimating) {
               const index = getViewIndexByCoordinates(i, j);
@@ -715,19 +731,32 @@
           });
           rowDiv.appendChild(dot);
         }
-      });
+      }
       progressIndicator.appendChild(rowDiv);
-    });
+    }
     document.body.appendChild(progressIndicator);
 
     function updateProgressDots() {
-      const dots = progressIndicator.querySelectorAll('.progress-dot');
       const { row, col } = getCurrentCoordinates();
-      dots.forEach((dot, index) => {
-        const dotRow = Math.floor(index / viewMatrix[0].length);
-        const dotCol = index % viewMatrix[0].length;
+      const dots = progressIndicator.querySelectorAll('.progress-dot');
+      dots.forEach(dot => {
+        const dotRow = parseInt(dot.dataset.row);
+        const dotCol = parseInt(dot.dataset.col);
         dot.classList.toggle('active', dotRow === row && dotCol === col);
       });
+    }
+
+    function updateNavArrows() {
+      const { row, col } = getCurrentCoordinates();
+      
+      // Проверяем возможность навигации в каждом направлении
+      const canGoLeft = col > 0 && viewMatrix[row][col - 1] !== null;
+      const canGoRight = col < viewMatrix[0].length - 1 && viewMatrix[row][col + 1] !== null;
+      const canGoUp = row > 0 && viewMatrix[row - 1][col] !== null;
+      const canGoDown = row < viewMatrix.length - 1 && viewMatrix[row + 1][col] !== null;
+
+      navPrev.classList.toggle('disabled', !canGoLeft);
+      navNext.classList.toggle('disabled', !canGoRight);
     }
 
     function showView(index, direction = '') {
@@ -749,11 +778,9 @@
 
       // Применяем соответствующие классы для анимации
       views.forEach((view, i) => {
-        view.classList.remove('prev', 'next', 'left', 'right');
+        view.classList.remove('prev', 'next', 'left', 'right', 'up', 'down');
         if (i === prevIndex) {
-          view.classList.add(actualDirection === 'left' || actualDirection === 'up' ? 'next' : 'prev');
-        } else if (i === index) {
-          view.classList.add(actualDirection === 'left' || actualDirection === 'up' ? 'prev' : 'next');
+          view.classList.add(actualDirection);
         }
       });
 
@@ -847,7 +874,7 @@
       const deltaX = e.changedTouches[0].clientX - touchStartX;
       const deltaY = e.changedTouches[0].clientY - touchStartY;
       if (Math.abs(deltaX) > 50 || Math.abs(deltaY) > 50) {
-        handleScroll(deltaX, deltaY);
+        handleScroll(-deltaX, -deltaY);
       }
     }, { passive: true });
 
