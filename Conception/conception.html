@@ -177,8 +177,13 @@
       transform: translateY(-50%);
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
+      gap: 1.5rem;
       z-index: 100;
+    }
+
+    .progress-row {
+      display: flex;
+      gap: 1rem;
     }
 
     .progress-dot {
@@ -213,6 +218,36 @@
       .view {
         padding: 1rem;
       }
+    }
+
+    /* Обновленные стили для матричной навигации */
+    .view {
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .view.prev {
+      transform: translateY(-50px) translateX(-50px);
+      opacity: 0;
+    }
+
+    .view.next {
+      transform: translateY(50px) translateX(50px);
+      opacity: 0;
+    }
+
+    .view.left {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+
+    .view.right {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+
+    .view.active {
+      transform: translate(0);
+      opacity: 1;
     }
   </style>
 </head>
@@ -624,53 +659,101 @@
 
   <!-- Core JS -->
   <script>
-    // Обновленный JavaScript для улучшенной навигации
+    // Основные переменные
     const views = Array.from(document.querySelectorAll('.view'));
     const navPrev = document.querySelector('.nav-prev');
     const navNext = document.querySelector('.nav-next');
     let currentViewIndex = 0;
     let isAnimating = false;
 
-    // Создаем индикатор прогресса
+    // Матрица представлений (2x3)
+    const viewMatrix = [
+      ['hero', 'experience', 'lab'],
+      ['skills', 'interests', null]  // null для пустой ячейки
+    ];
+    
+    // Получаем текущие координаты в матрице
+    function getCurrentCoordinates() {
+      const currentId = views[currentViewIndex].id;
+      for (let i = 0; i < viewMatrix.length; i++) {
+        for (let j = 0; j < viewMatrix[i].length; j++) {
+          if (viewMatrix[i][j] === currentId) {
+            return { row: i, col: j };
+          }
+        }
+      }
+      return { row: 0, col: 0 };
+    }
+
+    // Получаем индекс представления по координатам
+    function getViewIndexByCoordinates(row, col) {
+      if (row < 0 || row >= viewMatrix.length || 
+          col < 0 || col >= viewMatrix[0].length || 
+          !viewMatrix[row][col]) {
+        return -1;
+      }
+      const id = viewMatrix[row][col];
+      return views.findIndex(view => view.id === id);
+    }
+
+    // Создаем индикатор прогресса в виде матрицы
     const progressIndicator = document.createElement('div');
     progressIndicator.className = 'progress-indicator';
-    views.forEach((_, index) => {
-      const dot = document.createElement('div');
-      dot.className = 'progress-dot';
-      dot.addEventListener('click', () => {
-        if (!isAnimating) {
-          showView(index);
+    
+    viewMatrix.forEach((row, i) => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'progress-row';
+      row.forEach((viewId, j) => {
+        if (viewId) {
+          const dot = document.createElement('div');
+          dot.className = 'progress-dot';
+          dot.addEventListener('click', () => {
+            if (!isAnimating) {
+              const index = getViewIndexByCoordinates(i, j);
+              if (index !== -1) showView(index);
+            }
+          });
+          rowDiv.appendChild(dot);
         }
       });
-      progressIndicator.appendChild(dot);
+      progressIndicator.appendChild(rowDiv);
     });
     document.body.appendChild(progressIndicator);
 
     function updateProgressDots() {
       const dots = progressIndicator.querySelectorAll('.progress-dot');
+      const { row, col } = getCurrentCoordinates();
       dots.forEach((dot, index) => {
-        dot.classList.toggle('active', index === currentViewIndex);
+        const dotRow = Math.floor(index / viewMatrix[0].length);
+        const dotCol = index % viewMatrix[0].length;
+        dot.classList.toggle('active', dotRow === row && dotCol === col);
       });
     }
 
-    function updateNavArrows() {
-      navPrev.classList.toggle('disabled', currentViewIndex === 0);
-      navNext.classList.toggle('disabled', currentViewIndex === views.length - 1);
-    }
-
-    function showView(index) {
+    function showView(index, direction = '') {
       if (index < 0 || index >= views.length || isAnimating) return;
       
       isAnimating = true;
       const prevIndex = currentViewIndex;
       currentViewIndex = index;
 
+      // Определяем направление анимации
+      const prevCoords = getCurrentCoordinates();
+      const { row: newRow, col: newCol } = getCurrentCoordinates();
+      const actualDirection = direction || (
+        newRow < prevCoords.row ? 'up' :
+        newRow > prevCoords.row ? 'down' :
+        newCol < prevCoords.col ? 'left' :
+        'right'
+      );
+
+      // Применяем соответствующие классы для анимации
       views.forEach((view, i) => {
-        view.classList.remove('prev', 'next');
-        if (i < index) {
-          view.classList.add('prev');
-        } else if (i > index) {
-          view.classList.add('next');
+        view.classList.remove('prev', 'next', 'left', 'right');
+        if (i === prevIndex) {
+          view.classList.add(actualDirection === 'left' || actualDirection === 'up' ? 'next' : 'prev');
+        } else if (i === index) {
+          view.classList.add(actualDirection === 'left' || actualDirection === 'up' ? 'prev' : 'next');
         }
       });
 
@@ -680,99 +763,101 @@
       updateProgressDots();
       updateNavArrows();
 
-      // Разрешаем новую анимацию только после завершения текущей
       setTimeout(() => {
         isAnimating = false;
-      }, 600); // Время должно совпадать с длительностью CSS-анимации
+      }, 600);
     }
 
-    // Обработчики для навигационных стрелок
-    navPrev.addEventListener('click', () => {
-      if (!isAnimating) {
-        showView(currentViewIndex - 1);
-      }
-    });
-
-    navNext.addEventListener('click', () => {
-      if (!isAnimating) {
-        showView(currentViewIndex + 1);
-      }
-    });
-
-    // Улучшенная обработка прокрутки
-    let touchStartY = 0;
-    let touchEndY = 0;
-    let lastScrollTime = 0;
-    const scrollCooldown = 1000; // Задержка между прокрутками
-
-    function handleScroll(delta) {
-      const now = Date.now();
-      if (now - lastScrollTime < scrollCooldown || isAnimating) return;
+    // Обновленная функция навигации
+    function navigate(direction) {
+      if (isAnimating) return;
       
-      lastScrollTime = now;
-      if (delta > 0) {
-        showView(currentViewIndex + 1);
-      } else {
-        showView(currentViewIndex - 1);
+      const { row, col } = getCurrentCoordinates();
+      let newRow = row, newCol = col;
+      
+      switch (direction) {
+        case 'up': newRow--; break;
+        case 'down': newRow++; break;
+        case 'left': newCol--; break;
+        case 'right': newCol++; break;
+      }
+      
+      const newIndex = getViewIndexByCoordinates(newRow, newCol);
+      if (newIndex !== -1) {
+        showView(newIndex, direction);
       }
     }
 
-    // Обработка колесика мыши
-    document.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      handleScroll(e.deltaY);
-    }, { passive: false });
-
-    // Обработка тачскрина
-    document.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    document.addEventListener('touchend', (e) => {
-      touchEndY = e.changedTouches[0].clientY;
-      const delta = touchStartY - touchEndY;
-      if (Math.abs(delta) > 50) { // Минимальное расстояние для срабатывания свайпа
-        handleScroll(delta);
-      }
-    }, { passive: true });
-
-    // Обработка клавиатуры
+    // Обработчики для клавиатуры
     document.addEventListener('keydown', (e) => {
       if (isAnimating) return;
       
       switch (e.key) {
         case 'ArrowUp':
         case 'PageUp':
-          showView(currentViewIndex - 1);
+          navigate('up');
           break;
         case 'ArrowDown':
         case 'PageDown':
-        case ' ': // Пробел
-          showView(currentViewIndex + 1);
+        case ' ':
+          navigate('down');
+          break;
+        case 'ArrowLeft':
+          navigate('left');
+          break;
+        case 'ArrowRight':
+          navigate('right');
           break;
       }
     });
 
-    // Обработка темной темы
-    const themeToggle = document.getElementById('theme-toggle');
-    const html = document.documentElement;
-    const isDark = localStorage.getItem('theme') === 'dark';
-    
-    if (isDark) {
-      html.classList.add('dark');
+    // Обработчики для навигационных стрелок
+    navPrev.addEventListener('click', () => navigate('left'));
+    navNext.addEventListener('click', () => navigate('right'));
+
+    // Обработка скролла и свайпов
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let lastScrollTime = 0;
+    const scrollCooldown = 1000;
+
+    function handleScroll(deltaX, deltaY) {
+      const now = Date.now();
+      if (now - lastScrollTime < scrollCooldown || isAnimating) return;
+      
+      lastScrollTime = now;
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        navigate(deltaX > 0 ? 'right' : 'left');
+      } else {
+        navigate(deltaY > 0 ? 'down' : 'up');
+      }
     }
 
-    themeToggle.addEventListener('click', () => {
-      html.classList.toggle('dark');
-      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-    });
+    document.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      handleScroll(e.deltaX, e.deltaY);
+    }, { passive: false });
 
-    // Обработка языка
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      const deltaY = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(deltaX) > 50 || Math.abs(deltaY) > 50) {
+        handleScroll(deltaX, deltaY);
+      }
+    }, { passive: true });
+
+    // Мультиязычность
     const languageToggle = document.getElementById('language-toggle');
     const languageLabels = document.querySelectorAll('.language-label');
     const i18nElements = document.querySelectorAll('[data-i18n]');
+    let currentLang = localStorage.getItem('language') || 'ru';
 
-    // Простые переводы
+    // Переводы
     const translations = {
       ru: {
         'page-title': 'Резюме | Developer-Researcher',
@@ -782,6 +867,7 @@
         'nav-lab': 'Исследования',
         'nav-skills': 'Навыки',
         'nav-interests': 'Интересы',
+        'nav-hint': 'Используйте стрелки для навигации',
         'hero-badge-1': 'Разработчик',
         'hero-badge-2': 'Исследователь',
         'hero-title': 'Developer-Researcher',
@@ -834,6 +920,7 @@
         'nav-lab': 'Research',
         'nav-skills': 'Skills',
         'nav-interests': 'Interests',
+        'nav-hint': 'Use arrows to navigate',
         'hero-badge-1': 'Developer',
         'hero-badge-2': 'Researcher',
         'hero-title': 'Developer-Researcher',
@@ -883,22 +970,23 @@
     function updateTranslations(lang) {
       i18nElements.forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (translations[lang][key]) {
-          el.textContent = translations[lang][key];
+        if (translations[lang] && translations[lang][key]) {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = translations[lang][key];
+          } else {
+            el.textContent = translations[lang][key];
+          }
         }
       });
     }
 
     function updateLanguageLabels() {
       languageLabels.forEach(label => {
-        if (label.getAttribute('data-lang') === currentLang) {
-          label.classList.remove('hidden');
-        } else {
-          label.classList.add('hidden');
-        }
+        label.classList.toggle('hidden', label.getAttribute('data-lang') !== currentLang);
       });
     }
 
+    // Обработчик переключения языка
     languageToggle.addEventListener('click', () => {
       currentLang = currentLang === 'ru' ? 'en' : 'ru';
       document.documentElement.setAttribute('lang', currentLang);
@@ -909,15 +997,10 @@
 
     // Инициализация при загрузке
     document.addEventListener('DOMContentLoaded', () => {
-      // Установка текущего года
       document.getElementById('current-year').textContent = new Date().getFullYear();
-      
-      // Инициализация языка
       document.documentElement.setAttribute('lang', currentLang);
       updateTranslations(currentLang);
       updateLanguageLabels();
-      
-      // Показываем первое представление
       showView(0);
     });
 
