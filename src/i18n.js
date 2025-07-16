@@ -176,7 +176,32 @@ const messages = {
     },
     research: {
       title: 'Исследования',
-      interests: 'Области интересов',
+      interests: {
+        'title': 'Интересы и направления',
+        'activities': 'Активности',
+        'achievements': 'Достижения',
+        'autonomous': 'Автономные системы',
+        'autonomous-desc': 'Разработка и исследование автономных систем, включая дроны, роботов и самоуправляемые устройства. Интеграция сенсоров, алгоритмов навигации и систем принятия решений.',
+        'autonomous-act-1': 'ROS2 разработка',
+        'autonomous-act-2': 'Компьютерное зрение',
+        'autonomous-act-3': 'Алгоритмы навигации',
+        'autonomous-ach-1': 'Drone MVP',
+        'autonomous-ach-2': 'Computer Vision',
+        'education': 'Образовательные технологии',
+        'education-desc': 'Создание инновационных образовательных платформ с использованием ИИ для персонализации обучения и автоматизации оценки знаний.',
+        'education-act-1': 'LLM интеграции',
+        'education-act-2': 'Персонализация обучения',
+        'education-act-3': 'Аналитика данных',
+        'education-ach-1': 'EdTech',
+        'education-ach-2': 'AI Tutor',
+        'architecture': 'Системная архитектура',
+        'architecture-desc': 'Проектирование масштабируемых и отказоустойчивых систем с использованием современных архитектурных подходов, включая микросервисы и событийно-ориентированную архитектуру.',
+        'architecture-act-1': 'Микросервисы',
+        'architecture-act-2': 'Событийно-ориентированная архитектура',
+        'architecture-act-3': 'Масштабирование',
+        'architecture-ach-1': 'Microservices',
+        'architecture-ach-2': 'Event-Driven'
+      },
       publications: 'Публикации',
       conferences: 'Конференции',
       readMore: 'Читать полностью'
@@ -381,4 +406,4 @@ const messages = {
   }
 };
 
-export default messages; 
+export default messages;
